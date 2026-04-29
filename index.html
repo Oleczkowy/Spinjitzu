@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Zaliczeń Online</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: white; padding: 20px; margin: 0; display: flex; justify-content: center; }
+        .container { width: 100%; max-width: 450px; background: #16213e; padding: 25px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-top: 20px; }
+        .hidden { display: none; }
+        h2 { text-align: center; color: #00d2ff; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: none; background: #0f3460; color: white; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: #e94560; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        button:hover { background: #c62a48; }
+        .player-card { background: #0f3460; padding: 15px; margin-top: 15px; border-radius: 10px; border-left: 5px solid #e94560; }
+        .player-name { font-size: 18px; font-weight: bold; color: #00d2ff; margin-bottom: 10px; display: block; }
+        .task-row { display: flex; justify-content: space-between; align-items: center; background: #16213e; padding: 8px; margin: 5px 0; border-radius: 5px; font-size: 14px; }
+        .status-done { color: #28a745; font-weight: bold; }
+        .status-pending { color: #f39c12; }
+        .admin-btn { background: #28a745; width: auto; padding: 4px 10px; font-size: 11px; }
+        .admin-panel { border-top: 1px dashed #555; margin-top: 20px; padding-top: 15px; }
+        .logout { background: #555; margin-top: 20px; font-size: 12px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- LOGOWANIE -->
+    <div id="login-screen">
+        <h2>Dołącz do Gry</h2>
+        <input type="text" id="username" placeholder="Twoje imię">
+        <input type="password" id="password" placeholder="Hasło (Admin: 123)">
+        <button onclick="login()">Zaloguj / Stwórz Profil</button>
+    </div>
+
+    <!-- PANEL GŁÓWNY -->
+    <div id="main-screen" class="hidden">
+        <h2 id="role-title">Lista Zaliczeń</h2>
+        <div id="display-area">Wczytywanie graczy...</div>
+
+        <!-- PANEL ADMINA -->
+        <div id="admin-panel" class="admin-panel hidden">
+            <h3>Panel Administratora</h3>
+            <input type="text" id="new-task" placeholder="Nazwa zadania dla wszystkich">
+            <button onclick="addNewTask()">Dodaj zadanie każdemu</button>
+            <button onclick="resetData()" style="background:#555; margin-top:10px; font-size:10px;">Wyczyść wszystko</button>
+        </div>
+        
+        <button class="logout" onclick="location.reload()">Wyloguj</button>
+    </div>
+</div>
+
+<script>
+    // Publiczna baza danych online
+    const DB_URL = "https://kvdb.io";
+    let isAdmin = false;
+    let myName = "";
+    let state = { players: [], tasks: [] };
+
+    async function login() {
+        myName = document.getElementById('username').value.trim();
+        const pass = document.getElementById('password').value;
+        if (!myName) return alert("Podaj imię!");
+
+        if (myName.toLowerCase() === "admin" && pass === "123") isAdmin = true;
+
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('main-screen').classList.remove('hidden');
+        document.getElementById('role-title').innerText = isAdmin ? "KONTO ADMINA" : "GRACZ: " + myName;
+        if (isAdmin) document.getElementById('admin-panel').classList.remove('hidden');
+
+        await load();
+        if (!isAdmin && !state.players.includes(myName)) {
+            state.players.push(myName);
+            await save();
+        }
+        render();
+        setInterval(load, 3000); // Auto-odświeżanie
+    }
+
+    async function load() {
+        try {
+            const r = await fetch(DB_URL);
+            if (r.ok) {
+                const text = await r.text();
+                state = text ? JSON.parse(text) : { players: [], tasks: [] };
+                render();
+            }
+        } catch (e) { console.log("Błąd bazy"); }
+    }
+
+    async function save() {
+        await fetch(DB_URL, { method: 'POST', body: JSON.stringify(state) });
+        render();
+    }
+
+    async function addNewTask() {
+        const tName = document.getElementById('new-task').value;
+        if (!tName) return;
+        state.tasks.push({ name: tName, doneBy: [] });
+        document.getElementById('new-task').value = "";
+        await save();
+    }
+
+    async function markDone(pName, tName) {
+        const t = state.tasks.find(x => x.name === tName);
+        if (!t.doneBy.includes(pName)) {
+            t.doneBy.push(pName);
+            await save();
+        }
+    }
+
+    async function resetData() {
+        if(confirm("Usunąć wszystkich graczy i zadania?")) {
+            state = { players: [], tasks: [] };
+            await save();
+        }
+    }
+
+    function render() {
+        const area = document.getElementById('display-area');
+        area.innerHTML = state.players.length === 0 ? "Brak graczy online." : "";
+
+        state.players.forEach(p => {
+            let html = `<div class="player-card"><span class="player-name">👤 ${p}</span>`;
+            state.tasks.forEach(t => {
+                const isDone = t.doneBy.includes(p);
+                html += `
+                <div class="task-row">
+                    <span class="${isDone ? 'status-done' : 'status-pending'}">${isDone ? '✅' : '⏳'} ${t.name}</span>
+                    ${isAdmin && !isDone ? `<button class="admin-btn" onclick="markDone('${p}','${t.name}')">ZALICZ</button>` : ''}
+                </div>`;
+            });
+            html += `</div>`;
+            area.innerHTML += html;
+        });
+    }
+</script>
+</body>
+</html>
