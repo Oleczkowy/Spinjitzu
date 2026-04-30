@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>System Zaliczeń Online</title>
+    <title>System Zaliczeń - Spinjitzu</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: white; padding: 20px; margin: 0; display: flex; justify-content: center; }
         .container { width: 100%; max-width: 450px; background: #16213e; padding: 25px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-top: 20px; }
@@ -12,7 +12,7 @@
         input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: none; background: #0f3460; color: white; box-sizing: border-box; }
         button { width: 100%; padding: 12px; background: #e94560; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
         button:hover { background: #c62a48; }
-        .player-card { background: #0f3460; padding: 15px; margin-top: 15px; border-radius: 10px; border-left: 5px solid #e94560; }
+        .player-card { background: #0f3460; padding: 15px; margin-top: 15px; border-radius: 10px; border-left: 5px solid #007bff; }
         .player-name { font-size: 18px; font-weight: bold; color: #00d2ff; margin-bottom: 10px; display: block; }
         .task-row { display: flex; justify-content: space-between; align-items: center; background: #16213e; padding: 8px; margin: 5px 0; border-radius: 5px; font-size: 14px; }
         .status-done { color: #28a745; font-weight: bold; }
@@ -25,33 +25,29 @@
 <body>
 
 <div class="container">
-    <!-- EKRAN LOGOWANIA -->
     <div id="login-screen">
-        <h2>System Zaliczeń</h2>
+        <h2>System Spinjitzu</h2>
         <input type="text" id="username" placeholder="Twoje imię">
         <input type="password" id="password" placeholder="Hasło (Admin: 123)">
-        <button onclick="login()">Zaloguj się</button>
+        <button onclick="login()">Zaloguj / Stwórz Profil</button>
     </div>
 
-    <!-- PANEL GŁÓWNY -->
     <div id="main-screen" class="hidden">
         <h2 id="role-title">Lista Zaliczeń</h2>
-        <div id="display-area">Wczytywanie...</div>
+        <div id="display-area">Wczytywanie graczy...</div>
 
-        <!-- PANEL ADMINA -->
         <div id="admin-panel" class="admin-panel hidden">
             <h3>Panel Administratora</h3>
             <input type="text" id="new-task" placeholder="Nazwa zadania dla wszystkich">
             <button onclick="addNewTask()">Dodaj zadanie każdemu</button>
             <button onclick="resetData()" style="background:#444; margin-top:10px; font-size:10px;">Zresetuj wszystkich graczy</button>
         </div>
-        
         <button class="logout" onclick="location.reload()">Wyloguj</button>
     </div>
 </div>
 
 <script>
-    // Publiczna baza danych online
+    // TWÓJ NOWY, PRYWATNY KLUCZ BAZY DANYCH
     const DB_URL = "https://kvdb.io";
     let isAdmin = false;
     let myName = "";
@@ -61,7 +57,6 @@
         myName = document.getElementById('username').value.trim();
         const pass = document.getElementById('password').value;
         if (!myName) return alert("Podaj imię!");
-
         if (myName.toLowerCase() === "admin" && pass === "123") isAdmin = true;
 
         document.getElementById('login-screen').classList.add('hidden');
@@ -83,10 +78,12 @@
             const r = await fetch(DB_URL);
             if (r.ok) {
                 const text = await r.text();
-                state = text ? JSON.parse(text) : { players: [], tasks: [] };
-                render();
+                if (text) {
+                    state = JSON.parse(text);
+                    render();
+                }
             }
-        } catch (e) { console.log("Łączenie z bazą..."); }
+        } catch (e) { console.log("Baza jest jeszcze pusta."); }
     }
 
     async function save() {
@@ -111,7 +108,7 @@
     }
 
     async function resetData() {
-        if(confirm("Czy na pewno wyczyścić całą listę graczy?")) {
+        if(confirm("Czy na pewno wyczyścić listę graczy?")) {
             state = { players: [], tasks: [] };
             await save();
         }
