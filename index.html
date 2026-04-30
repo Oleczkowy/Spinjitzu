@@ -17,7 +17,7 @@
         .task-row { display: flex; justify-content: space-between; align-items: center; background: #16213e; padding: 8px; margin: 5px 0; border-radius: 5px; font-size: 14px; }
         .status-done { color: #28a745; font-weight: bold; }
         .status-pending { color: #f39c12; }
-        .admin-btn { background: #28a745; width: auto; padding: 4px 10px; font-size: 11px; }
+        .admin-btn { background: #28a745; width: auto; padding: 4px 10px; font-size: 11px; color: white; border: none; border-radius: 4px; cursor: pointer; }
         .admin-panel { border-top: 1px dashed #555; margin-top: 20px; padding-top: 15px; }
         .logout { background: #555; margin-top: 20px; font-size: 12px; }
     </style>
@@ -25,25 +25,25 @@
 <body>
 
 <div class="container">
-    <!-- LOGOWANIE -->
+    <!-- EKRAN LOGOWANIA -->
     <div id="login-screen">
-        <h2>Dołącz do Gry</h2>
+        <h2>System Zaliczeń</h2>
         <input type="text" id="username" placeholder="Twoje imię">
         <input type="password" id="password" placeholder="Hasło (Admin: 123)">
-        <button onclick="login()">Zaloguj / Stwórz Profil</button>
+        <button onclick="login()">Zaloguj się</button>
     </div>
 
     <!-- PANEL GŁÓWNY -->
     <div id="main-screen" class="hidden">
         <h2 id="role-title">Lista Zaliczeń</h2>
-        <div id="display-area">Wczytywanie graczy...</div>
+        <div id="display-area">Wczytywanie...</div>
 
         <!-- PANEL ADMINA -->
         <div id="admin-panel" class="admin-panel hidden">
             <h3>Panel Administratora</h3>
             <input type="text" id="new-task" placeholder="Nazwa zadania dla wszystkich">
             <button onclick="addNewTask()">Dodaj zadanie każdemu</button>
-            <button onclick="resetData()" style="background:#555; margin-top:10px; font-size:10px;">Wyczyść wszystko</button>
+            <button onclick="resetData()" style="background:#444; margin-top:10px; font-size:10px;">Zresetuj wszystkich graczy</button>
         </div>
         
         <button class="logout" onclick="location.reload()">Wyloguj</button>
@@ -75,7 +75,7 @@
             await save();
         }
         render();
-        setInterval(load, 3000); // Auto-odświeżanie
+        setInterval(load, 3000);
     }
 
     async function load() {
@@ -86,7 +86,7 @@
                 state = text ? JSON.parse(text) : { players: [], tasks: [] };
                 render();
             }
-        } catch (e) { console.log("Błąd bazy"); }
+        } catch (e) { console.log("Łączenie z bazą..."); }
     }
 
     async function save() {
@@ -104,14 +104,14 @@
 
     async function markDone(pName, tName) {
         const t = state.tasks.find(x => x.name === tName);
-        if (!t.doneBy.includes(pName)) {
+        if (t && !t.doneBy.includes(pName)) {
             t.doneBy.push(pName);
             await save();
         }
     }
 
     async function resetData() {
-        if(confirm("Usunąć wszystkich graczy i zadania?")) {
+        if(confirm("Czy na pewno wyczyścić całą listę graczy?")) {
             state = { players: [], tasks: [] };
             await save();
         }
@@ -119,7 +119,7 @@
 
     function render() {
         const area = document.getElementById('display-area');
-        area.innerHTML = state.players.length === 0 ? "Brak graczy online." : "";
+        area.innerHTML = state.players.length === 0 ? "Brak aktywnych graczy." : "";
 
         state.players.forEach(p => {
             let html = `<div class="player-card"><span class="player-name">👤 ${p}</span>`;
